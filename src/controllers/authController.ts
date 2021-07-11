@@ -1,9 +1,12 @@
 import { RequestHandler } from 'express';
 import { getDb } from '../config/db-setup';
 import { catchError, throwError } from '../utils/errorHandling';
-import { clientCredentials } from '../utils/generateCrypto';
+import { clientCredentials, generateCode } from '../utils/generateCrypto';
 import User from '../models/user';
 import OauthApplication from '../models/oauthapplication';
+import bcrypt from 'bcrypt';
+import { generateJwt } from '../utils/jwt';
+
 // const TimeStamp = mongodb.Timestamp;
 // const bson = require('bson');
 export const signUp: RequestHandler = async (req, res, next) => {
@@ -62,7 +65,106 @@ export const authorizeCode: RequestHandler = async (req, res, next) => {
 				throwError(error, 400);
 			}
 		}
-		res.json({ message: 'auth flow started successfully' });
+		res.render('login.ejs', {
+			clientId: client_id,
+			redirectUri: redirect_uri,
+		});
+	} catch (error) {
+		catchError(error, next);
+	}
+};
+
+export const sendCode: RequestHandler = async (req, res, next) => {
+	try {
+		const { email, password, clientId, redirectUri } = req.body;
+		const { purpose } = req.query;
+		let code: string;
+		if (purpose === 'login') {
+			const user = await getDb().db().collection('users').findOne({ email, ownerId: clientId });
+			if (!user) {
+				throwError('Wrong credentials', 400);
+			}
+			const isSame = await bcrypt.compare(password, user.password);
+			if (!isSame) {
+				throwError('Wrong credentials', 400);
+			}
+			code = await generateCode();
+			const clientSecret = await getDb()
+				.db()
+				.collection('users')
+				.findOne({ 'applications.clientId': user.ownerId }, { projection: { 'applications.$': 1 } });
+			if (clientSecret) {
+				await getDb().db().collection('verifyCode').insertOne({
+					code,
+					clientId: user.ownerId,
+					clientSecret: clientSecret.applications[0].clientSecret,
+					redirectUri,
+					createdAt: new Date(),
+				});
+			}
+			if (!clientSecret.applications[0].redirectUri.includes(redirectUri)) {
+				throwError('Wrong redirect Uri', 400);
+			}
+			return res.redirect(`${redirectUri}?code=${code}`);
+		}
+		if (purpose === 'signup') {
+			const hashedPwd = await bcrypt.hash(password, 12);
+			const owner = await getDb()
+				.db()
+				.collection('users')
+				.findOne({ 'applications.clientId': clientId }, { projection: { 'applications.$': 1 } });
+			if (!owner) {
+				throwError('No such client exists', 400);
+			}
+			const user = await getDb().db().collection('users').findOne({ email, ownerId: clientId });
+			if (user) {
+				throwError('User with that email already exists', 400);
+			}
+			await getDb()
+				.db()
+				.collection('users')
+				.insertOne({
+					email,
+					password: hashedPwd,
+					ownerId: clientId,
+					fullName: email.split('@')[0],
+					createdAt: new Date(),
+				});
+			if (!owner.applications[0].redirectUri.includes(redirectUri)) {
+				throwError('Wrong redirect Uri', 400);
+			}
+			code = await generateCode();
+			await getDb().db().collection('verifyCode').insertOne({
+				code,
+				clientId: clientId,
+				clientSecret: owner.applications[0].clientSecret,
+				redirectUri,
+				createdAt: new Date(),
+			});
+			return res.redirect(`${redirectUri}?code=${code}`);
+		}
+		return res.json({ message: 'Nothing to find here' });
+	} catch (error) {
+		catchError(error, next);
+	}
+};
+
+export const sendToken: RequestHandler = async (req, res, next) => {
+	try {
+		const { grant_type, code, redirect_uri, code_verifier, client_id, client_secret } = req.body;
+		if (grant_type === 'code') {
+			const validCode = await getDb()
+				.db()
+				.collection('verifyCode')
+				.findOne({ code, redirectUri: redirect_uri, clientId: client_id, clientSecret: client_secret });
+			if (!validCode) {
+				throwError('Invalid parameters', 400);
+			}
+			const scope = validCode.clientSecret === process.env.ADMIN_CLIENT_SECRET ? 'createOauth' : '';
+			const token = generateJwt(validCode, process.env.MAIN_JWT_SECRET, scope);
+			res.json({ accessToken: token });
+		}
+		return res.json({ message: 'Nothing to find here' });
 	} catch (error) {
 		catchError(error, next);
 	}

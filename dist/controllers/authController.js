@@ -39,11 +39,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.authorizeCode = exports.createApplication = exports.signUp = void 0;
+exports.sendToken = exports.sendCode = exports.authorizeCode = exports.createApplication = exports.signUp = void 0;
+var db_setup_1 = require("../config/db-setup");
 var errorHandling_1 = require("../utils/errorHandling");
 var generateCrypto_1 = require("../utils/generateCrypto");
 var user_1 = __importDefault(require("../models/user"));
 var oauthapplication_1 = __importDefault(require("../models/oauthapplication"));
+var bcrypt_1 = __importDefault(require("bcrypt"));
+var jwt_1 = require("../utils/jwt");
 // const TimeStamp = mongodb.Timestamp;
 // const bson = require('bson');
 var signUp = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
@@ -131,7 +134,10 @@ var authorizeCode = function (req, res, next) { return __awaiter(void 0, void 0,
                 }
                 _c.label = 2;
             case 2:
-                res.json({ message: 'auth flow started successfully' });
+                res.render('login.ejs', {
+                    clientId: client_id,
+                    redirectUri: redirect_uri,
+                });
                 return [3 /*break*/, 4];
             case 3:
                 error_3 = _c.sent();
@@ -142,4 +148,140 @@ var authorizeCode = function (req, res, next) { return __awaiter(void 0, void 0,
     });
 }); };
 exports.authorizeCode = authorizeCode;
+var sendCode = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var _a, email, password, clientId, redirectUri, purpose, code, user, isSame, clientSecret, hashedPwd, owner, user, error_4;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 15, , 16]);
+                _a = req.body, email = _a.email, password = _a.password, clientId = _a.clientId, redirectUri = _a.redirectUri;
+                purpose = req.query.purpose;
+                code = void 0;
+                if (!(purpose === 'login')) return [3 /*break*/, 7];
+                return [4 /*yield*/, db_setup_1.getDb().db().collection('users').findOne({ email: email, ownerId: clientId })];
+            case 1:
+                user = _b.sent();
+                if (!user) {
+                    errorHandling_1.throwError('Wrong credentials', 400);
+                }
+                return [4 /*yield*/, bcrypt_1.default.compare(password, user.password)];
+            case 2:
+                isSame = _b.sent();
+                if (!isSame) {
+                    errorHandling_1.throwError('Wrong credentials', 400);
+                }
+                return [4 /*yield*/, generateCrypto_1.generateCode()];
+            case 3:
+                code = _b.sent();
+                return [4 /*yield*/, db_setup_1.getDb()
+                        .db()
+                        .collection('users')
+                        .findOne({ 'applications.clientId': user.ownerId }, { projection: { 'applications.$': 1 } })];
+            case 4:
+                clientSecret = _b.sent();
+                if (!clientSecret) return [3 /*break*/, 6];
+                return [4 /*yield*/, db_setup_1.getDb().db().collection('verifyCode').insertOne({
+                        code: code,
+                        clientId: user.ownerId,
+                        clientSecret: clientSecret.applications[0].clientSecret,
+                        redirectUri: redirectUri,
+                        createdAt: new Date(),
+                    })];
+            case 5:
+                _b.sent();
+                _b.label = 6;
+            case 6:
+                if (!clientSecret.applications[0].redirectUri.includes(redirectUri)) {
+                    errorHandling_1.throwError('Wrong redirect Uri', 400);
+                }
+                return [2 /*return*/, res.redirect(redirectUri + "?code=" + code)];
+            case 7:
+                if (!(purpose === 'signup')) return [3 /*break*/, 14];
+                return [4 /*yield*/, bcrypt_1.default.hash(password, 12)];
+            case 8:
+                hashedPwd = _b.sent();
+                return [4 /*yield*/, db_setup_1.getDb()
+                        .db()
+                        .collection('users')
+                        .findOne({ 'applications.clientId': clientId }, { projection: { 'applications.$': 1 } })];
+            case 9:
+                owner = _b.sent();
+                if (!owner) {
+                    errorHandling_1.throwError('No such client exists', 400);
+                }
+                return [4 /*yield*/, db_setup_1.getDb().db().collection('users').findOne({ email: email, ownerId: clientId })];
+            case 10:
+                user = _b.sent();
+                if (user) {
+                    errorHandling_1.throwError('User with that email already exists', 400);
+                }
+                return [4 /*yield*/, db_setup_1.getDb()
+                        .db()
+                        .collection('users')
+                        .insertOne({
+                        email: email,
+                        password: hashedPwd,
+                        ownerId: clientId,
+                        fullName: email.split('@')[0],
+                        createdAt: new Date(),
+                    })];
+            case 11:
+                _b.sent();
+                if (!owner.applications[0].redirectUri.includes(redirectUri)) {
+                    errorHandling_1.throwError('Wrong redirect Uri', 400);
+                }
+                return [4 /*yield*/, generateCrypto_1.generateCode()];
+            case 12:
+                code = _b.sent();
+                return [4 /*yield*/, db_setup_1.getDb().db().collection('verifyCode').insertOne({
+                        code: code,
+                        clientId: clientId,
+                        clientSecret: owner.applications[0].clientSecret,
+                        redirectUri: redirectUri,
+                        createdAt: new Date(),
+                    })];
+            case 13:
+                _b.sent();
+                return [2 /*return*/, res.redirect(redirectUri + "?code=" + code)];
+            case 14: return [2 /*return*/, res.json({ message: 'Nothing to find here' })];
+            case 15:
+                error_4 = _b.sent();
+                errorHandling_1.catchError(error_4, next);
+                return [3 /*break*/, 16];
+            case 16: return [2 /*return*/];
+        }
+    });
+}); };
+exports.sendCode = sendCode;
+var sendToken = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var _a, grant_type, code, redirect_uri, code_verifier, client_id, client_secret, validCode, scope, token, error_5;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 3, , 4]);
+                _a = req.body, grant_type = _a.grant_type, code = _a.code, redirect_uri = _a.redirect_uri, code_verifier = _a.code_verifier, client_id = _a.client_id, client_secret = _a.client_secret;
+                if (!(grant_type === 'code')) return [3 /*break*/, 2];
+                return [4 /*yield*/, db_setup_1.getDb()
+                        .db()
+                        .collection('verifyCode')
+                        .findOne({ code: code, redirectUri: redirect_uri, clientId: client_id, clientSecret: client_secret })];
+            case 1:
+                validCode = _b.sent();
+                if (!validCode) {
+                    errorHandling_1.throwError('Invalid parameters', 400);
+                }
+                scope = validCode.clientSecret === process.env.ADMIN_CLIENT_SECRET ? 'createOauth' : '';
+                token = jwt_1.generateJwt(validCode, process.env.MAIN_JWT_SECRET, scope);
+                res.json({ accessToken: token });
+                _b.label = 2;
+            case 2: return [2 /*return*/, res.json({ message: 'Nothing to find here' })];
+            case 3:
+                error_5 = _b.sent();
+                errorHandling_1.catchError(error_5, next);
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); };
+exports.sendToken = sendToken;
 // return res.redirect(redirect_uri + `?error=access_denied&state=${state}&reason=invalid_response_type`);

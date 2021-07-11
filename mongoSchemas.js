@@ -23,6 +23,10 @@ db.runCommand({
 					bsonType: 'date',
 					description: 'must be a date',
 				},
+				ownerId: {
+					bsonType: 'string',
+					description: 'must be a string',
+				},
 				applications: {
 					bsonType: 'array',
 					description: 'must be a array',
@@ -52,6 +56,39 @@ db.runCommand({
 							},
 						},
 					},
+				},
+			},
+		},
+	},
+});
+
+db.createCollection(
+	"verifyCode",
+	{
+	validator: {
+		$jsonSchema: {
+			bsonType: 'object',
+			required: ['code', 'clientId', 'clientSecret', 'createdAt'],
+			properties: {
+				code: {
+					bsonType: 'string',
+					description: 'must be a string',
+				},
+				clientId: {
+					bsonType: 'string',
+					description: 'must be a int',
+				},
+				clientSecret: {
+					bsonType: 'string',
+					description: 'must be a int',
+				},
+				redirectUri: {
+					bsonType: 'string',
+					description: 'must be a int',
+				},
+				createdAt: {
+					bsonType: 'date',
+					description: 'must be a date',
 				},
 			},
 		},

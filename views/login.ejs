@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+		<style>
+			body {
+				margin-left: 100px;
+				margin-top: 100px;
+			}
+		</style>
+	</head>
+	<body>
+		<div>
+			<form action="http://localhost:3999/code?purpose=login" method="POST">
+				<input type="text" name="email" id="loginEmail" />
+				<input type="password" name="password" id="loginPassword" />
+				<input type="hidden" name="clientId" value="<%=clientId%>" />
+				<input type="hidden" name="redirectUri" value="<%=redirectUri%>" />
+				<button type="submit" id="login">login</button>
+			</form>
+		</div>
+		<br />
+		<div>
+			<form action="http://localhost:3999/code?purpose=signup" method="POST">
+				<input type="text" name="email" id="signEmail" />
+				<input type="password" name="password" id="signPassword" />
+				<input type="hidden" name="clientId" value="<%=clientId%>" />
+				<input type="hidden" name="redirectUri" value="<%=redirectUri%>" />
+				<button type="submit" id="signup">signUp</button>
+			</form>
+		</div>
+
+		<!-- <script>
+			const loginBtn = document.getElementById('login');
+			const loginEmail = document.getElementById('loginEmail');
+			const loginPwd = document.getElementById('loginPassword');
+			console.log('howdy');
+			const signBtn = document.getElementById('signup');
+			const signEmail = document.getElementById('signEmail');
+			const signPwd = document.getElementById('signPassword');
+
+			loginBtn.addEventListener('click', async (e) => {
+				console.log('1');
+				fetch('http://localhost:3999/code?purpose=login', {
+					method: 'POST',
+					body: JSON.stringify({
+						email: loginEmail.value,
+						password: loginPwd.value,
+					}),
+				});
+			});
+
+			signBtn.addEventListener('click', (e) => {
+				console.log('2');
+				fetch('http://localhost:3999/code?purpose=signUp', {
+					method: 'POST',
+					body: JSON.stringify({
+						email: signEmail.value,
+						password: signPwd.value,
+					}),
+				});
+			});
+		</script> -->
+	</body>
+</html>

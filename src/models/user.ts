@@ -12,11 +12,11 @@ export default class User {
 				fullName: this.fullName,
 				createdAt: new Date(),
 			});
-			return ['success', null];
+			return ['success', null]; 
 		} catch (error) {
 			console.log(error);
 			return [null, error];
-		}
+		} 
 	}
 
 	static async findUserByEmail(email: string): Promise<Array<string | null>> {

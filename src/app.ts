@@ -5,11 +5,17 @@ import { initDb } from './config/db-setup';
 import { Express, Request, Response, NextFunction } from 'express';
 import { ErrorObject } from './utils/errorHandling';
 import { isAuth } from './middlewares/isAuth';
+import path from "path"
 
 const app: Express = express();
 dotenv.config();
 
 app.use(express.json());
+app.use(express.urlencoded({extended: false}))
+
+app.set('view engine', 'ejs');
+console.log(__dirname);
+app.set('views', path.join(__dirname, '..','views'));
 
 app.use(authRoutes);
 

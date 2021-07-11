@@ -39,35 +39,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateCode = exports.clientCredentials = void 0;
-var crypto_1 = __importDefault(require("crypto"));
-var clientCredentials = function () { return __awaiter(void 0, void 0, void 0, function () {
-    var clientIdBuffer, clientId, clientSecretBuffer, clientSecret;
+exports.generateJwt = void 0;
+var jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+var generateJwt = function (user, secret, scope) { return __awaiter(void 0, void 0, void 0, function () {
+    var token;
     return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0: return [4 /*yield*/, crypto_1.default.randomBytes(12)];
-            case 1:
-                clientIdBuffer = _a.sent();
-                clientId = clientIdBuffer.toString('hex');
-                return [4 /*yield*/, crypto_1.default.randomBytes(12)];
-            case 2:
-                clientSecretBuffer = _a.sent();
-                clientSecret = clientSecretBuffer.toString('hex');
-                return [2 /*return*/, [clientId, clientSecret]];
+        try {
+            token = jsonwebtoken_1.default.sign({ id: user.id, scope: scope }, secret);
+            return [2 /*return*/, [null, token]];
         }
+        catch (err) {
+            console.log(err);
+            return [2 /*return*/, [err, null]];
+        }
+        return [2 /*return*/];
     });
 }); };
-exports.clientCredentials = clientCredentials;
-var generateCode = function () { return __awaiter(void 0, void 0, void 0, function () {
-    var codeBuffer, code;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0: return [4 /*yield*/, crypto_1.default.randomBytes(6)];
-            case 1:
-                codeBuffer = _a.sent();
-                code = codeBuffer.toString('hex');
-                return [2 /*return*/, code];
-        }
-    });
-}); };
-exports.generateCode = generateCode;
+exports.generateJwt = generateJwt;

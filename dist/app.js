@@ -8,9 +8,14 @@ var dotenv_1 = __importDefault(require("dotenv"));
 var authRouter_1 = __importDefault(require("./routes/authRouter"));
 var db_setup_1 = require("./config/db-setup");
 var isAuth_1 = require("./middlewares/isAuth");
+var path_1 = __importDefault(require("path"));
 var app = express_1.default();
 dotenv_1.default.config();
 app.use(express_1.default.json());
+app.use(express_1.default.urlencoded({ extended: false }));
+app.set('view engine', 'ejs');
+console.log(__dirname);
+app.set('views', path_1.default.join(__dirname, '..', 'views'));
 app.use(authRouter_1.default);
 app.use(isAuth_1.isAuth, function (req, res, next) {
     res.json({ message: 'Welcome to Oauth server of Armenian Edward' });

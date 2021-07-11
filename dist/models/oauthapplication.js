@@ -82,31 +82,30 @@ var OauthApplication = /** @class */ (function () {
         });
     };
     OauthApplication.matchRedirectUrl = function (clientId, url) {
-        var _a, _b;
+        var _a;
         return __awaiter(this, void 0, void 0, function () {
             var redirectUri, error, error, error_2;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
-                        _c.trys.push([0, 2, , 3]);
+                        _b.trys.push([0, 2, , 3]);
                         return [4 /*yield*/, db_setup_1.getDb()
                                 .db()
                                 .collection('users')
                                 .findOne({ 'applications.clientId': clientId }, { projection: { 'applications.$': 1 } })];
                     case 1:
-                        redirectUri = _c.sent();
-                        console.log((_a = redirectUri === null || redirectUri === void 0 ? void 0 : redirectUri.applications[0]) === null || _a === void 0 ? void 0 : _a.redirectUri[0]);
+                        redirectUri = _b.sent();
                         if (!redirectUri) {
                             error = new Error('No client found');
                             return [2 /*return*/, [null, error.message]];
                         }
-                        if (((_b = redirectUri === null || redirectUri === void 0 ? void 0 : redirectUri.applications[0]) === null || _b === void 0 ? void 0 : _b.redirectUri[0]) !== url) {
+                        if (((_a = redirectUri === null || redirectUri === void 0 ? void 0 : redirectUri.applications[0]) === null || _a === void 0 ? void 0 : _a.redirectUri[0]) !== url) {
                             error = new Error('redirect Url-s dont match');
                             return [2 /*return*/, [null, error.message]];
                         }
                         return [2 /*return*/, [redirectUri, null]];
                     case 2:
-                        error_2 = _c.sent();
+                        error_2 = _b.sent();
                         return [2 /*return*/, [null, error_2]];
                     case 3: return [2 /*return*/];
                 }

@@ -10,4 +10,6 @@ var authController_1 = require("../controllers/authController");
 router.get('/auth', authController_1.authorizeCode);
 router.post('/user', authController_1.signUp);
 router.post('/application', authController_1.createApplication);
+router.post('/code', authController_1.sendCode);
+router.post('/token', authController_1.sendToken);
 exports.default = router;

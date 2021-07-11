@@ -6,6 +6,8 @@ declare global {
 			DB_NAME: string;
 			LOCALHOST: string;
 			SECRET_KEY: string;
+			ADMIN_CLIENT_SECRET: string;
+			MAIN_JWT_SECRET: string;
 		}
 	}
 	namespace Express {

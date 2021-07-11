@@ -45,7 +45,6 @@ export default class OauthApplication {
 				.db()
 				.collection('users')
 				.findOne({ 'applications.clientId': clientId }, { projection: { 'applications.$': 1 } });
-			console.log(redirectUri?.applications[0]?.redirectUri[0]);
 			if (!redirectUri) {
 				const error = new Error('No client found');
 				return [null, error.message];
