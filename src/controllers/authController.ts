@@ -53,10 +53,8 @@ export const authorizeCode: RequestHandler = async (req, res, next) => {
 		if (response_type !== 'code') {
 			throwError('Only response type code available', 403);
 		}
-		const client = await getDb().db().collection('users').findOne({ 'applications.clientId': client_id });
-		if (!client) {
-			throwError('No client found', 404);
-		}
+		// extra request. cam be done down there
+
 		if (typeof client_id == 'string' && typeof redirect_uri == 'string') {
 			const [redirectUrl, error] = await OauthApplication.matchRedirectUrl(client_id, redirect_uri);
 			console.log(redirectUrl);

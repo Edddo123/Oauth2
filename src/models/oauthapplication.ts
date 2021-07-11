@@ -44,13 +44,16 @@ export default class OauthApplication {
 			const redirectUri = await getDb()
 				.db()
 				.collection('users')
-				.findOne({ 'applications.clientId': clientId }, { projection: { 'applications.$': 1} });
+				.findOne({ 'applications.clientId': clientId }, { projection: { 'applications.$': 1 } });
 			console.log(redirectUri?.applications[0]?.redirectUri[0]);
+			if (!redirectUri) {
+				const error = new Error('No client found');
+				return [null, error.message];
+			}
 			if (redirectUri?.applications[0]?.redirectUri[0] !== url) {
 				const error = new Error('redirect Url-s dont match');
 				return [null, error.message];
 			}
-			console.log(redirectUri);
 			return [redirectUri, null];
 		} catch (error) {
 			return [null, error];

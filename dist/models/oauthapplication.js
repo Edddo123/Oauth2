@@ -84,7 +84,7 @@ var OauthApplication = /** @class */ (function () {
     OauthApplication.matchRedirectUrl = function (clientId, url) {
         var _a, _b;
         return __awaiter(this, void 0, void 0, function () {
-            var redirectUri, error, error_2;
+            var redirectUri, error, error, error_2;
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
@@ -96,11 +96,14 @@ var OauthApplication = /** @class */ (function () {
                     case 1:
                         redirectUri = _c.sent();
                         console.log((_a = redirectUri === null || redirectUri === void 0 ? void 0 : redirectUri.applications[0]) === null || _a === void 0 ? void 0 : _a.redirectUri[0]);
+                        if (!redirectUri) {
+                            error = new Error('No client found');
+                            return [2 /*return*/, [null, error.message]];
+                        }
                         if (((_b = redirectUri === null || redirectUri === void 0 ? void 0 : redirectUri.applications[0]) === null || _b === void 0 ? void 0 : _b.redirectUri[0]) !== url) {
                             error = new Error('redirect Url-s dont match');
                             return [2 /*return*/, [null, error.message]];
                         }
-                        console.log(redirectUri);
                         return [2 /*return*/, [redirectUri, null]];
                     case 2:
                         error_2 = _c.sent();
