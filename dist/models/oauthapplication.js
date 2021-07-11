@@ -59,7 +59,7 @@ var OauthApplication = /** @class */ (function () {
                         return [4 /*yield*/, db_setup_1.getDb()
                                 .db()
                                 .collection('users')
-                                .updateOne({ _id: new ObjectId('60d899a5673e50057c6b2943') }, // here will go req.userId
+                                .updateOne({ _id: new ObjectId('60ea2a354f24fa5d80a089fa') }, // here will go req.userId
                             {
                                 $push: {
                                     applications: {
@@ -76,6 +76,35 @@ var OauthApplication = /** @class */ (function () {
                     case 2:
                         error_1 = _a.sent();
                         return [2 /*return*/, [null, error_1]];
+                    case 3: return [2 /*return*/];
+                }
+            });
+        });
+    };
+    OauthApplication.matchRedirectUrl = function (clientId, url) {
+        var _a, _b;
+        return __awaiter(this, void 0, void 0, function () {
+            var redirectUri, error, error_2;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0:
+                        _c.trys.push([0, 2, , 3]);
+                        return [4 /*yield*/, db_setup_1.getDb()
+                                .db()
+                                .collection('users')
+                                .findOne({ 'applications.clientId': clientId }, { projection: { 'applications.$': 1 } })];
+                    case 1:
+                        redirectUri = _c.sent();
+                        console.log((_a = redirectUri === null || redirectUri === void 0 ? void 0 : redirectUri.applications[0]) === null || _a === void 0 ? void 0 : _a.redirectUri[0]);
+                        if (((_b = redirectUri === null || redirectUri === void 0 ? void 0 : redirectUri.applications[0]) === null || _b === void 0 ? void 0 : _b.redirectUri[0]) !== url) {
+                            error = new Error('redirect Url-s dont match');
+                            return [2 /*return*/, [null, error.message]];
+                        }
+                        console.log(redirectUri);
+                        return [2 /*return*/, [redirectUri, null]];
+                    case 2:
+                        error_2 = _c.sent();
+                        return [2 /*return*/, [null, error_2]];
                     case 3: return [2 /*return*/];
                 }
             });

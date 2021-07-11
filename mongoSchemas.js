@@ -96,3 +96,10 @@ db.users.updateOne(
 		},
 	}
 );
+
+// db.users.findOne({applications: {$all: [ {$elemMatch: {appName: "Main app"}}]}})
+// db.users.find({"applications.appName": "appN1"}, {_id: 0, applications: {$elemMatch: {appname: "appN1"}}}) elem match should work as well
+
+// db.users.find({"applications.appName": "appN1"}, {_id: 1, "applications.$": 1}).pretty() $ - it uses query condition and returns first matching element, in elemMatch u specify condition yourself
+
+//, redirectUri: {$all: ["http://localhost:4001/auth/redirect"]}

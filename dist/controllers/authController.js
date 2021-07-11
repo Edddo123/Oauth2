@@ -40,6 +40,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authorizeCode = exports.createApplication = exports.signUp = void 0;
+var db_setup_1 = require("../config/db-setup");
 var errorHandling_1 = require("../utils/errorHandling");
 var generateCrypto_1 = require("../utils/generateCrypto");
 var user_1 = __importDefault(require("../models/user"));
@@ -111,11 +112,41 @@ var createApplication = function (req, res, next) { return __awaiter(void 0, voi
     });
 }); };
 exports.createApplication = createApplication;
-var authorizeCode = function (req, res, next) {
-    var _a = req.query, response_type = _a.response_type, client_id = _a.client_id, redirect_uri = _a.redirect_uri, scope = _a.scope, state = _a.state, code_challenge = _a.code_challenge, code_challenge_method = _a.code_challenge_method;
-    if (response_type !== 'code') {
-        return res.redirect(redirect_uri + ("?error=access_denied&state=" + state + "&reason=invalid_response_type"));
-    }
-    res.json({ message: 'auth flow started successfully' });
-};
+var authorizeCode = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var _a, response_type, client_id, redirect_uri, scope, state, code_challenge, code_challenge_method, client, _b, redirectUrl, error, error_3;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
+            case 0:
+                _c.trys.push([0, 4, , 5]);
+                _a = req.query, response_type = _a.response_type, client_id = _a.client_id, redirect_uri = _a.redirect_uri, scope = _a.scope, state = _a.state, code_challenge = _a.code_challenge, code_challenge_method = _a.code_challenge_method;
+                if (response_type !== 'code') {
+                    errorHandling_1.throwError('Only response type code available', 403);
+                }
+                return [4 /*yield*/, db_setup_1.getDb().db().collection('users').findOne({ 'applications.clientId': client_id })];
+            case 1:
+                client = _c.sent();
+                if (!client) {
+                    errorHandling_1.throwError('No client found', 404);
+                }
+                if (!(typeof client_id == 'string' && typeof redirect_uri == 'string')) return [3 /*break*/, 3];
+                return [4 /*yield*/, oauthapplication_1.default.matchRedirectUrl(client_id, redirect_uri)];
+            case 2:
+                _b = _c.sent(), redirectUrl = _b[0], error = _b[1];
+                console.log(redirectUrl);
+                if (error) {
+                    errorHandling_1.throwError(error, 400);
+                }
+                _c.label = 3;
+            case 3:
+                res.json({ message: 'auth flow started successfully' });
+                return [3 /*break*/, 5];
+            case 4:
+                error_3 = _c.sent();
+                errorHandling_1.catchError(error_3, next);
+                return [3 /*break*/, 5];
+            case 5: return [2 /*return*/];
+        }
+    });
+}); };
 exports.authorizeCode = authorizeCode;
+// return res.redirect(redirect_uri + `?error=access_denied&state=${state}&reason=invalid_response_type`);

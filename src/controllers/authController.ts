@@ -46,11 +46,28 @@ export const createApplication: RequestHandler = async (req, res, next) => {
 	}
 };
 
-export const authorizeCode: RequestHandler = (req, res, next) => {
-	const { response_type, client_id, redirect_uri, scope, state, code_challenge, code_challenge_method } = req.query;
-	if (response_type !== 'code') {
-		return res.redirect(redirect_uri + `?error=access_denied&state=${state}&reason=invalid_response_type`);
+export const authorizeCode: RequestHandler = async (req, res, next) => {
+	try {
+		const { response_type, client_id, redirect_uri, scope, state, code_challenge, code_challenge_method } =
+			req.query;
+		if (response_type !== 'code') {
+			throwError('Only response type code available', 403);
+		}
+		const client = await getDb().db().collection('users').findOne({ 'applications.clientId': client_id });
+		if (!client) {
+			throwError('No client found', 404);
+		}
+		if (typeof client_id == 'string' && typeof redirect_uri == 'string') {
+			const [redirectUrl, error] = await OauthApplication.matchRedirectUrl(client_id, redirect_uri);
+			console.log(redirectUrl);
+			if (error) {
+				throwError(error, 400);
+			}
+		}
+		res.json({ message: 'auth flow started successfully' });
+	} catch (error) {
+		catchError(error, next);
 	}
-
-	res.json({ message: 'auth flow started successfully' });
 };
+
+// return res.redirect(redirect_uri + `?error=access_denied&state=${state}&reason=invalid_response_type`);

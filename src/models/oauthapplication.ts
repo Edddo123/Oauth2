@@ -21,7 +21,7 @@ export default class OauthApplication {
 				.db()
 				.collection('users')
 				.updateOne(
-					{ _id: new ObjectId('60d899a5673e50057c6b2943') }, // here will go req.userId
+					{ _id: new ObjectId('60ea2a354f24fa5d80a089fa') }, // here will go req.userId
 					{
 						$push: {
 							applications: {
@@ -34,6 +34,24 @@ export default class OauthApplication {
 					}
 				);
 			return [user, null];
+		} catch (error) {
+			return [null, error];
+		}
+	}
+
+	static async matchRedirectUrl(clientId: string, url: string): Promise<Array<string | null>> {
+		try {
+			const redirectUri = await getDb()
+				.db()
+				.collection('users')
+				.findOne({ 'applications.clientId': clientId }, { projection: { 'applications.$': 1} });
+			console.log(redirectUri?.applications[0]?.redirectUri[0]);
+			if (redirectUri?.applications[0]?.redirectUri[0] !== url) {
+				const error = new Error('redirect Url-s dont match');
+				return [null, error.message];
+			}
+			console.log(redirectUri);
+			return [redirectUri, null];
 		} catch (error) {
 			return [null, error];
 		}
