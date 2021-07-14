@@ -1,11 +1,12 @@
 import { RequestHandler } from 'express';
 import { getDb } from '../config/db-setup';
 import { catchError, throwError } from '../utils/errorHandling';
-import { clientCredentials, generateCode } from '../utils/generateCrypto';
+import { clientCredentials, comparePkce, generateCode } from '../utils/generateCrypto';
 import User from '../models/user';
 import OauthApplication from '../models/oauthapplication';
 import bcrypt from 'bcrypt';
 import { generateJwt } from '../utils/jwt';
+import crypto from 'crypto';
 
 // const TimeStamp = mongodb.Timestamp;
 // const bson = require('bson');
@@ -53,6 +54,7 @@ export const authorizeCode: RequestHandler = async (req, res, next) => {
 	try {
 		const { response_type, client_id, redirect_uri, scope, state, code_challenge, code_challenge_method } =
 			req.query;
+		let hashed_code_challenge;
 		if (response_type !== 'code') {
 			throwError('Only response type code available', 403);
 		}
@@ -65,9 +67,20 @@ export const authorizeCode: RequestHandler = async (req, res, next) => {
 				throwError(error, 400);
 			}
 		}
+		if (code_challenge_method !== 'sha256') {
+			throwError('this hashing algorithm is not supported', 400);
+		}
+		if (code_challenge && code_challenge_method == 'sha256') {
+			hashed_code_challenge = crypto
+				.createHash(code_challenge_method)
+				.update(code_challenge.toString())
+				.digest('base64');
+		}
 		res.render('login.ejs', {
 			clientId: client_id,
 			redirectUri: redirect_uri,
+			code_challenge: hashed_code_challenge,
+			code_challenge_method,
 		});
 	} catch (error) {
 		catchError(error, next);
@@ -76,7 +89,7 @@ export const authorizeCode: RequestHandler = async (req, res, next) => {
 
 export const sendCode: RequestHandler = async (req, res, next) => {
 	try {
-		const { email, password, clientId, redirectUri } = req.body;
+		const { email, password, clientId, redirectUri, code_challenge, code_challenge_method } = req.body;
 		const { purpose } = req.query;
 		let code: string;
 		if (purpose === 'login') {
@@ -100,6 +113,8 @@ export const sendCode: RequestHandler = async (req, res, next) => {
 					clientSecret: clientSecret.applications[0].clientSecret,
 					redirectUri,
 					createdAt: new Date(),
+					codeChallenge: code_challenge,
+					codeMethod: code_challenge_method,
 				});
 			}
 			if (!clientSecret.applications[0].redirectUri.includes(redirectUri)) {
@@ -129,6 +144,8 @@ export const sendCode: RequestHandler = async (req, res, next) => {
 					ownerId: clientId,
 					fullName: email.split('@')[0],
 					createdAt: new Date(),
+					codeChallenge: code_challenge,
+					codeMethod: code_challenge_method,
 				});
 			if (!owner.applications[0].redirectUri.includes(redirectUri)) {
 				throwError('Wrong redirect Uri', 400);
@@ -160,9 +177,19 @@ export const sendToken: RequestHandler = async (req, res, next) => {
 			if (!validCode) {
 				throwError('Invalid parameters', 400);
 			}
-			const scope = validCode.clientSecret === process.env.ADMIN_CLIENT_SECRET ? 'createOauth' : '';
-			const token = generateJwt(validCode, process.env.MAIN_JWT_SECRET, scope);
-			res.json({ accessToken: token });
+			const [pkceError, pkce] = comparePkce(code_verifier, validCode.codeChallenge, validCode.codeMethod);
+			if (pkceError) {
+				throwError(pkceError.message, 400);
+			}
+			if (!pkce) {
+				throwError('pkce values dont match', 400);
+			}
+			const scope = validCode.clientSecret == process.env.ADMIN_CLIENT_SECRET ? 'createOauth' : '';
+			const [error, token] = generateJwt(validCode, process.env.MAIN_JWT_SECRET, scope);
+			if (error) {
+				throwError(error.message, 400);
+			}
+			return res.json({ accessToken: token });
 		}
 		return res.json({ message: 'Nothing to find here' });
 	} catch (error) {

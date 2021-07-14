@@ -39,7 +39,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateCode = exports.clientCredentials = void 0;
+exports.comparePkce = exports.generateCode = exports.clientCredentials = void 0;
 var crypto_1 = __importDefault(require("crypto"));
 var clientCredentials = function () { return __awaiter(void 0, void 0, void 0, function () {
     var clientIdBuffer, clientId, clientSecretBuffer, clientSecret;
@@ -71,3 +71,12 @@ var generateCode = function () { return __awaiter(void 0, void 0, void 0, functi
     });
 }); };
 exports.generateCode = generateCode;
+var comparePkce = function (plainText, challenge, method) {
+    if (method !== 'sha256') {
+        var error = new Error('given hash is not supported');
+        return [error, null];
+    }
+    var hash = crypto_1.default.createHash(method).update(plainText).digest('base64');
+    return [null, challenge === hash];
+};
+exports.comparePkce = comparePkce;

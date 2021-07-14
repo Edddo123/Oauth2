@@ -14,3 +14,16 @@ export const generateCode: () => Promise<string> = async () => {
 	const code = codeBuffer.toString('hex');
 	return code;
 };
+
+export const comparePkce: (plainText: string, challenge: string, method: string) => [null, boolean] | [Error, null] = (
+	plainText,
+	challenge,
+	method
+) => {
+	if (method !== 'sha256') {
+		const error = new Error('given hash is not supported');
+		return [error, null];
+	}
+	const hash = crypto.createHash(method).update(plainText).digest('base64');
+	return [null, challenge === hash];
+};

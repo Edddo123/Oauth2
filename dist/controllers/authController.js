@@ -47,6 +47,7 @@ var user_1 = __importDefault(require("../models/user"));
 var oauthapplication_1 = __importDefault(require("../models/oauthapplication"));
 var bcrypt_1 = __importDefault(require("bcrypt"));
 var jwt_1 = require("../utils/jwt");
+var crypto_1 = __importDefault(require("crypto"));
 // const TimeStamp = mongodb.Timestamp;
 // const bson = require('bson');
 var signUp = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
@@ -115,12 +116,13 @@ var createApplication = function (req, res, next) { return __awaiter(void 0, voi
 }); };
 exports.createApplication = createApplication;
 var authorizeCode = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a, response_type, client_id, redirect_uri, scope, state, code_challenge, code_challenge_method, _b, redirectUrl, error, error_3;
+    var _a, response_type, client_id, redirect_uri, scope, state, code_challenge, code_challenge_method, hashed_code_challenge, _b, redirectUrl, error, error_3;
     return __generator(this, function (_c) {
         switch (_c.label) {
             case 0:
                 _c.trys.push([0, 3, , 4]);
                 _a = req.query, response_type = _a.response_type, client_id = _a.client_id, redirect_uri = _a.redirect_uri, scope = _a.scope, state = _a.state, code_challenge = _a.code_challenge, code_challenge_method = _a.code_challenge_method;
+                hashed_code_challenge = void 0;
                 if (response_type !== 'code') {
                     errorHandling_1.throwError('Only response type code available', 403);
                 }
@@ -134,9 +136,20 @@ var authorizeCode = function (req, res, next) { return __awaiter(void 0, void 0,
                 }
                 _c.label = 2;
             case 2:
+                if (code_challenge_method !== 'sha256') {
+                    errorHandling_1.throwError('this hashing algorithm is not supported', 400);
+                }
+                if (code_challenge && code_challenge_method == 'sha256') {
+                    hashed_code_challenge = crypto_1.default
+                        .createHash(code_challenge_method)
+                        .update(code_challenge.toString())
+                        .digest('base64');
+                }
                 res.render('login.ejs', {
                     clientId: client_id,
                     redirectUri: redirect_uri,
+                    code_challenge: hashed_code_challenge,
+                    code_challenge_method: code_challenge_method,
                 });
                 return [3 /*break*/, 4];
             case 3:
@@ -149,12 +162,12 @@ var authorizeCode = function (req, res, next) { return __awaiter(void 0, void 0,
 }); };
 exports.authorizeCode = authorizeCode;
 var sendCode = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a, email, password, clientId, redirectUri, purpose, code, user, isSame, clientSecret, hashedPwd, owner, user, error_4;
+    var _a, email, password, clientId, redirectUri, code_challenge, code_challenge_method, purpose, code, user, isSame, clientSecret, hashedPwd, owner, user, error_4;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
                 _b.trys.push([0, 15, , 16]);
-                _a = req.body, email = _a.email, password = _a.password, clientId = _a.clientId, redirectUri = _a.redirectUri;
+                _a = req.body, email = _a.email, password = _a.password, clientId = _a.clientId, redirectUri = _a.redirectUri, code_challenge = _a.code_challenge, code_challenge_method = _a.code_challenge_method;
                 purpose = req.query.purpose;
                 code = void 0;
                 if (!(purpose === 'login')) return [3 /*break*/, 7];
@@ -186,6 +199,8 @@ var sendCode = function (req, res, next) { return __awaiter(void 0, void 0, void
                         clientSecret: clientSecret.applications[0].clientSecret,
                         redirectUri: redirectUri,
                         createdAt: new Date(),
+                        codeChallenge: code_challenge,
+                        codeMethod: code_challenge_method,
                     })];
             case 5:
                 _b.sent();
@@ -224,6 +239,8 @@ var sendCode = function (req, res, next) { return __awaiter(void 0, void 0, void
                         ownerId: clientId,
                         fullName: email.split('@')[0],
                         createdAt: new Date(),
+                        codeChallenge: code_challenge,
+                        codeMethod: code_challenge_method,
                     })];
             case 11:
                 _b.sent();
@@ -254,11 +271,11 @@ var sendCode = function (req, res, next) { return __awaiter(void 0, void 0, void
 }); };
 exports.sendCode = sendCode;
 var sendToken = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a, grant_type, code, redirect_uri, code_verifier, client_id, client_secret, validCode, scope, token, error_5;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
+    var _a, grant_type, code, redirect_uri, code_verifier, client_id, client_secret, validCode, _b, pkceError, pkce, scope, _c, error, token, error_5;
+    return __generator(this, function (_d) {
+        switch (_d.label) {
             case 0:
-                _b.trys.push([0, 3, , 4]);
+                _d.trys.push([0, 3, , 4]);
                 _a = req.body, grant_type = _a.grant_type, code = _a.code, redirect_uri = _a.redirect_uri, code_verifier = _a.code_verifier, client_id = _a.client_id, client_secret = _a.client_secret;
                 if (!(grant_type === 'code')) return [3 /*break*/, 2];
                 return [4 /*yield*/, db_setup_1.getDb()
@@ -266,17 +283,26 @@ var sendToken = function (req, res, next) { return __awaiter(void 0, void 0, voi
                         .collection('verifyCode')
                         .findOne({ code: code, redirectUri: redirect_uri, clientId: client_id, clientSecret: client_secret })];
             case 1:
-                validCode = _b.sent();
+                validCode = _d.sent();
                 if (!validCode) {
                     errorHandling_1.throwError('Invalid parameters', 400);
                 }
-                scope = validCode.clientSecret === process.env.ADMIN_CLIENT_SECRET ? 'createOauth' : '';
-                token = jwt_1.generateJwt(validCode, process.env.MAIN_JWT_SECRET, scope);
-                res.json({ accessToken: token });
-                _b.label = 2;
+                _b = generateCrypto_1.comparePkce(code_verifier, validCode.codeChallenge, validCode.codeMethod), pkceError = _b[0], pkce = _b[1];
+                if (pkceError) {
+                    errorHandling_1.throwError(pkceError.message, 400);
+                }
+                if (!pkce) {
+                    errorHandling_1.throwError('pkce values dont match', 400);
+                }
+                scope = validCode.clientSecret == process.env.ADMIN_CLIENT_SECRET ? 'createOauth' : '';
+                _c = jwt_1.generateJwt(validCode, process.env.MAIN_JWT_SECRET, scope), error = _c[0], token = _c[1];
+                if (error) {
+                    errorHandling_1.throwError(error.message, 400);
+                }
+                return [2 /*return*/, res.json({ accessToken: token })];
             case 2: return [2 /*return*/, res.json({ message: 'Nothing to find here' })];
             case 3:
-                error_5 = _b.sent();
+                error_5 = _d.sent();
                 errorHandling_1.catchError(error_5, next);
                 return [3 /*break*/, 4];
             case 4: return [2 /*return*/];

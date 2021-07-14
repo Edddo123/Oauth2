@@ -4,7 +4,7 @@ interface jwtPayload {
 	id: string;
 }
 
-export const generateJwt: (user: jwtPayload, secret: string, scope?: string) => Promise<any> = async (
+export const generateJwt: (user: jwtPayload, secret: string, scope?: string) => [null, string] | [Error, null] = (
 	user,
 	secret,
 	scope
